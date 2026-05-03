@@ -20,6 +20,13 @@ class PreviewPanel:
         # Store raw image data per canvas so we can re-render on resize
         self._canvas_data: dict[tk.Canvas, tuple] = {}  # canvas -> (img, is_gray)
 
+        # Sync pan and zoom state
+        self.zoom_factor = 1.0
+        self.pan_x = 0
+        self.pan_y = 0
+        self._drag_start_x = 0
+        self._drag_start_y = 0
+
         # Debounce timer id per canvas
         self._resize_after_ids: dict[tk.Canvas, str] = {}
 
@@ -69,7 +76,59 @@ class PreviewPanel:
         canvas = tk.Canvas(parent, bg="#1e1e1e", highlightthickness=0)
         canvas.pack(fill="both", expand=True, padx=2, pady=2)
         canvas.bind("<Configure>", lambda e, c=canvas: self._on_canvas_resize(c))
+
+        # Zoom and pan bindings
+        canvas.bind("<MouseWheel>", self._on_mousewheel)
+        canvas.bind("<Button-4>", self._on_mousewheel)  # Linux scroll up
+        canvas.bind("<Button-5>", self._on_mousewheel)  # Linux scroll down
+        canvas.bind("<ButtonPress-1>", self._on_pan_start)
+        canvas.bind("<B1-Motion>", self._on_pan_drag)
+        canvas.bind("<Double-Button-1>", self._reset_view)
+        
         return canvas
+
+    def _on_mousewheel(self, event):
+        if event.num == 5 or event.delta < 0:
+            self.zoom_factor /= 1.15
+        elif event.num == 4 or event.delta > 0:
+            self.zoom_factor *= 1.15
+            
+        self.zoom_factor = max(1.0, min(self.zoom_factor, 50.0))
+        
+        if self.zoom_factor == 1.0:
+            self.pan_x = 0
+            self.pan_y = 0
+            
+        self._redraw_all()
+
+    def _on_pan_start(self, event):
+        self._drag_start_x = event.x
+        self._drag_start_y = event.y
+
+    def _on_pan_drag(self, event):
+        if self.zoom_factor <= 1.0:
+            return
+            
+        dx = event.x - self._drag_start_x
+        dy = event.y - self._drag_start_y
+        self.pan_x += dx
+        self.pan_y += dy
+        self._drag_start_x = event.x
+        self._drag_start_y = event.y
+        
+        self._redraw_all()
+
+    def _reset_view(self, event):
+        self.zoom_factor = 1.0
+        self.pan_x = 0
+        self.pan_y = 0
+        self._redraw_all()
+
+    def _redraw_all(self):
+        for canvas in (self.canvas_source, self.canvas_orig, self.canvas_result):
+            if canvas in self._canvas_data:
+                img, is_gray = self._canvas_data[canvas]
+                self._render_image(canvas, img, is_gray=is_gray)
 
     def _on_canvas_resize(self, canvas: tk.Canvas):
         """Debounced handler — re-renders the stored image after resizing stops."""
@@ -138,11 +197,42 @@ class PreviewPanel:
         )
 
         iw, ih = pil.size
-        scale = min(cw / iw, ch / ih)
-        nw, nh = max(1, int(iw * scale)), max(1, int(ih * scale))
-        pil = pil.resize((nw, nh), Image.Resampling.LANCZOS)
+        bs = min(cw / iw, ch / ih)
+        s = bs * self.zoom_factor
 
-        photo = ImageTk.PhotoImage(pil)
+        center_x = cw / 2 + self.pan_x
+        center_y = ch / 2 + self.pan_y
+
+        cx_min = center_x - (iw * s) / 2
+        cy_min = center_y - (ih * s) / 2
+        cx_max = center_x + (iw * s) / 2
+        cy_max = center_y + (ih * s) / 2
+
+        crop_cx_min = max(cx_min, 0)
+        crop_cy_min = max(cy_min, 0)
+        crop_cx_max = min(cx_max, cw)
+        crop_cy_max = min(cy_max, ch)
+
+        if crop_cx_min >= crop_cx_max or crop_cy_min >= crop_cy_max:
+            canvas.delete("all")
+            return
+
+        raw_x_min = (crop_cx_min - cx_min) / s
+        raw_y_min = (crop_cy_min - cy_min) / s
+        raw_x_max = (crop_cx_max - cx_min) / s
+        raw_y_max = (crop_cy_max - cy_min) / s
+
+        cropped_pil = pil.crop((raw_x_min, raw_y_min, raw_x_max, raw_y_max))
+        target_w = int(crop_cx_max - crop_cx_min)
+        target_h = int(crop_cy_max - crop_cy_min)
+
+        if target_w <= 0 or target_h <= 0:
+            canvas.delete("all")
+            return
+
+        resized_pil = cropped_pil.resize((target_w, target_h), Image.Resampling.LANCZOS)
+        photo = ImageTk.PhotoImage(resized_pil)
+
         canvas.delete("all")
-        canvas.create_image(cw // 2, ch // 2, anchor="center", image=photo)
+        canvas.create_image((crop_cx_min + crop_cx_max) / 2, (crop_cy_min + crop_cy_max) / 2, anchor="center", image=photo)
         self._canvas_images[canvas] = photo  # prevent GC
