@@ -114,8 +114,6 @@ class PseudoColorStudioApp:
 
         saved = 0
         for algo in ALGORITHMS:
-            if algo == "CNN: Best model":
-                continue  # skip async CNN in batch save
             result = self._run_algorithm(algo, self.original_gray)
             if result is not None:
                 safe = algo.replace(":", "").replace(" ", "_").replace("/", "-")
@@ -328,10 +326,42 @@ class PseudoColorStudioApp:
                 font=ctk.CTkFont(size=11), wraplength=thumb,
             ).pack(pady=(0, 6))
 
-        # CNN note
+        def _on_compare_cnn_done(future):
+            try:
+                bgr = future.result()
+                if bgr is None:
+                    return
+                img_np = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                pil = Image.fromarray(img_np).resize((thumb, thumb), Image.Resampling.LANCZOS)
+                photo = ImageTk.PhotoImage(pil)
+
+                nonlocal valid_idx
+                r, c = divmod(valid_idx, cols)
+                frame = ctk.CTkFrame(scroll, corner_radius=8)
+                frame.grid(row=r, column=c, padx=6, pady=6)
+                valid_idx += 1
+
+                canvas = tk.Canvas(frame, width=thumb, height=thumb, bg="#1e1e1e", highlightthickness=0)
+                canvas.create_image(0, 0, anchor="nw", image=photo)
+                compare_images.append(photo)
+                canvas.pack(padx=4, pady=4)
+
+                ctk.CTkLabel(
+                    frame, text="CNN: Best model",
+                    font=ctk.CTkFont(size=11), wraplength=thumb,
+                ).pack(pady=(0, 6))
+            except Exception as e:
+                print(f"Compare CNN failed: {e}")
+
+        # Start CNN asynchronously for compare
+        cnn_future = self._cnn_executor.submit(self._run_algorithm, "CNN: Best model", self.original_gray.copy())
+        cnn_future.add_done_callback(
+            lambda f: self.root.after(0, lambda: _on_compare_cnn_done(f))
+        )
+
         ctk.CTkLabel(
             win,
-            text="ℹ️  CNN: Best model is excluded from batch compare (runs asynchronously).",
+            text="ℹ️  CNN: Best model is running asynchronously and will appear when finished.",
             font=ctk.CTkFont(size=11), text_color="gray60",
         ).pack(pady=(0, 8))
 
