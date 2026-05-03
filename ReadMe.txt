@@ -29,3 +29,4 @@ macOS / Linux (bash/zsh)
 
 Notes
 - If you already have an active virtual environment, skip the creation step.
+- Windows only: If you get a PowerShell error saying "running scripts is disabled on this system", run this command first: Set-ExecutionPolicy Unrestricted -Scope CurrentUser
