@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from algorithms.utils import prepare_gray
+
 # Default color palette for slices (BGR)
 DEFAULT_COLORS = [
     (139, 0,   0  ),
@@ -21,7 +23,7 @@ def apply_level_slicing(
     background: bool = False,
 ) -> np.ndarray:
     """Divide intensity range [0, 255] into n_slices equal bands and paint each band a distinct color."""
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
     n_slices = max(2, min(8, n_slices))
 
     if colors is None:
@@ -56,7 +58,7 @@ def apply_custom_slicing(
     colors: list,
 ) -> np.ndarray:
     """Apply level slicing with user-defined threshold values."""
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
     lut = np.stack([np.arange(256)] * 3, axis=-1).astype(np.uint8)
 
     thresholds = sorted(thresholds)
@@ -75,11 +77,4 @@ def apply_custom_slicing(
     return colored
 
 
-def _prepare_gray(img: np.ndarray) -> np.ndarray:
-    if img.ndim == 3:
-        img = img[:, :, 0]
-    if img.dtype != np.uint8:
-        img = (np.clip(img, 0, 1) * 255).astype(np.uint8) \
-              if img.max() <= 1.0 \
-              else np.clip(img, 0, 255).astype(np.uint8)
-    return img
+

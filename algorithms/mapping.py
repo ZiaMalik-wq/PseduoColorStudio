@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from algorithms.utils import prepare_gray
+
 
 def apply_sin_mapping(gray_img: np.ndarray, frequency: float = 1.0) -> np.ndarray:
     """
@@ -11,7 +13,7 @@ def apply_sin_mapping(gray_img: np.ndarray, frequency: float = 1.0) -> np.ndarra
     G = sin(f * pi * I + 2pi/3)
     B = sin(f * pi * I + 4pi/3)
     """
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
     f = frequency * np.pi
 
     gray_vals = np.arange(256, dtype=np.float32) / 255.0
@@ -32,7 +34,7 @@ def apply_histogram_equalized_lut(gray_img: np.ndarray, colormap: str = "jet") -
     """Apply histogram equalization before colormap mapping."""
     import algorithms.lut as lut_module
 
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
     equalized = cv2.equalizeHist(gray)
     return lut_module.apply_lut(equalized, colormap)
 
@@ -45,7 +47,7 @@ def apply_gamma_mapped(
     """Apply gamma correction then colormap."""
     import algorithms.lut as lut_module
 
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
 
     gray_vals = np.arange(256, dtype=np.float32) / 255.0
     corrected = np.power(gray_vals, 1.0 / gamma)
@@ -57,7 +59,7 @@ def apply_gamma_mapped(
 
 def apply_density_mapping(gray_img: np.ndarray) -> np.ndarray:
     """Density-style coloring: maps intensity to a blue-green-yellow-red scale."""
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
 
     gray_vals = np.arange(256, dtype=np.float32) / 255.0
     R = np.where(gray_vals < 0.5, 0.0, (gray_vals - 0.5) * 2)
@@ -73,11 +75,4 @@ def apply_density_mapping(gray_img: np.ndarray) -> np.ndarray:
     return colored
 
 
-def _prepare_gray(img: np.ndarray) -> np.ndarray:
-    if img.ndim == 3:
-        img = img[:, :, 0]
-    if img.dtype != np.uint8:
-        img = (np.clip(img, 0, 1) * 255).astype(np.uint8) \
-              if img.max() <= 1.0 \
-              else np.clip(img, 0, 255).astype(np.uint8)
-    return img
+

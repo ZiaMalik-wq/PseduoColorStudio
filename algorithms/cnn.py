@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from algorithms.utils import prepare_gray
+
 
 # =========================
 # CONFIG
@@ -97,7 +99,7 @@ def _get_model():
 # MAIN INFERENCE FUNCTION
 # =========================
 def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | None = None) -> np.ndarray:
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img, bgr_to_gray=True)
 
     if output_size is None:
         output_size = (gray.shape[1], gray.shape[0])
@@ -155,20 +157,7 @@ def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | Non
     return bgr
 
 
-# =========================
-# HELPERS
-# =========================
-def _prepare_gray(img: np.ndarray) -> np.ndarray:
-    if img.ndim == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    if img.dtype != np.uint8:
-        if img.max() <= 1.0:
-            img = (img * 255).astype(np.uint8)
-        else:
-            img = np.clip(img, 0, 255).astype(np.uint8)
-
-    return img
 
 
 def _pad_to_multiple(gray: np.ndarray, multiple: int):

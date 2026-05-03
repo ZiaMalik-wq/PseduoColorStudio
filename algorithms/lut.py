@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from algorithms.utils import prepare_gray
+
 # Available colormaps (OpenCV built-ins + custom)
 COLORMAPS = {
     "jet":      cv2.COLORMAP_JET,
@@ -27,7 +29,7 @@ def apply_lut(gray_img: np.ndarray, colormap: str = "jet") -> np.ndarray:
     Returns:
         colored:   BGR image (H, W, 3) uint8
     """
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
 
     if colormap not in COLORMAPS:
         raise ValueError(f"Unknown colormap '{colormap}'. Choose from: {list(COLORMAPS.keys())}")
@@ -47,7 +49,7 @@ def apply_custom_lut(gray_img: np.ndarray, lut: np.ndarray) -> np.ndarray:
     Returns:
         colored:   BGR image (H, W, 3) uint8
     """
-    gray = _prepare_gray(gray_img)
+    gray = prepare_gray(gray_img)
     colored = cv2.LUT(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), lut)
     return colored
 
@@ -71,11 +73,4 @@ def build_custom_lut(
     return lut
 
 
-def _prepare_gray(img: np.ndarray) -> np.ndarray:
-    if img.ndim == 3:
-        img = img[:, :, 0]
-    if img.dtype != np.uint8:
-        img = (np.clip(img, 0, 1) * 255).astype(np.uint8) \
-              if img.max() <= 1.0 \
-              else np.clip(img, 0, 255).astype(np.uint8)
-    return img
+
