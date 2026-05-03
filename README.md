@@ -11,7 +11,6 @@ Color Studio is a Python project for color processing that includes a convolutio
 - **models/**: Saved model weights used by the CNN.
 - **images/**: Sample images for testing.
 - **notebooks/**: Research and training notebooks (including training.ipynb).
-- **tests/**: Unit tests for algorithm validation.
 
 ## Running the Project
 

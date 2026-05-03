@@ -18,7 +18,8 @@ ENV/
 Thumbs.db
 
 # Editor
-.vscode/
 
 # Logs
 *.log
+config.bat
+node_modules
