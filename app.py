@@ -69,10 +69,11 @@ class PseudoColorStudioApp:
         self.root.bind("<Return>", lambda e: self._apply())
 
     # ------------------------------------------------------------------ #
-    #  Image I/O                                                           #
+    #  Image I/O                                                         #
     # ------------------------------------------------------------------ #
 
     def _open_image(self):
+        """Prompt user for an image and load it into the application."""
         path = filedialog.askopenfilename(
             title="Open image",
             filetypes=[
@@ -102,6 +103,7 @@ class PseudoColorStudioApp:
         self._apply()
 
     def _save_result(self):
+        """Prompt user to save the current algorithm result to disk."""
         if self.result_bgr is None:
             messagebox.showinfo("Nothing to save", "Apply an algorithm first.")
             return
@@ -115,6 +117,7 @@ class PseudoColorStudioApp:
             self.toolbar.status_var.set(f"Saved → {os.path.basename(path)}")
 
     def _save_all(self):
+        """Run all algorithms on the current image and save to a directory."""
         if self.original_gray is None:
             messagebox.showinfo("No image", "Open an image first.")
             return
@@ -135,10 +138,11 @@ class PseudoColorStudioApp:
         messagebox.showinfo("Done", f"Saved {saved} images to:\n{folder}")
 
     # ------------------------------------------------------------------ #
-    #  Algorithm dispatch                                                  #
+    #  Algorithm dispatch                                                #
     # ------------------------------------------------------------------ #
 
     def _apply(self):
+        """Dispatch the currently selected algorithm or queue the CNN."""
         if self.original_gray is None:
             return
         algo = self.controls.algo_var.get()
@@ -159,6 +163,7 @@ class PseudoColorStudioApp:
             self.previews.info_var.set(f"Applied: {algo}")
 
     def _run_algorithm(self, algo: str, gray: np.ndarray) -> np.ndarray | None:
+        """Execute a specific synchronous algorithm based on its string identifier."""
         try:
             if algo == "LUT: Jet":
                 return lut.apply_lut(gray, "jet")
@@ -205,6 +210,7 @@ class PseudoColorStudioApp:
 
     @staticmethod
     def _parse_thresholds(text: str) -> list[int]:
+        """Parse a comma-separated string of integers into a sorted threshold list."""
         thresholds = []
         for part in text.split(","):
             value = part.strip()
@@ -227,6 +233,7 @@ class PseudoColorStudioApp:
     # ------------------------------------------------------------------ #
 
     def _apply_cnn_async(self):
+        """Queue a new asynchronous CNN inference request."""
         if self.original_gray is None:
             return
 
@@ -245,6 +252,7 @@ class PseudoColorStudioApp:
         self._start_next_cnn_request()
 
     def _start_next_cnn_request(self):
+        """Dequeue and start the next pending CNN inference task."""
         if self._cnn_pending_request is None:
             self._cnn_busy = False
             self.controls.set_apply_btn_state(enabled=True)
@@ -267,10 +275,12 @@ class PseudoColorStudioApp:
 
     @staticmethod
     def _run_cnn_model(gray: np.ndarray, output_size: tuple[int, int], color_boost: float) -> np.ndarray:
+        """Static wrapper to execute the CNN model in a background thread."""
         from algorithms import cnn
         return cnn.apply_trained_model(gray, output_size=output_size, color_boost=color_boost)
 
     def _on_cnn_finished(self, request_id: int, future):
+        """Handle the completion of a CNN background task and update the UI."""
         self._cnn_busy = False
         self.controls.set_apply_btn_state(enabled=True)
 
@@ -300,6 +310,7 @@ class PseudoColorStudioApp:
     # ------------------------------------------------------------------ #
 
     def _compare_all(self):
+        """Open a new window displaying thumbnails of all algorithms applied to the image."""
         if self.original_gray is None:
             messagebox.showinfo("No image", "Open an image first.")
             return
@@ -397,6 +408,7 @@ class PseudoColorStudioApp:
 # ------------------------------------------------------------------ #
 
 def launch():
+    """Initialize and launch the main application event loop."""
     root = ctk.CTk()
     PseudoColorStudioApp(root)
     root.mainloop()
