@@ -181,7 +181,11 @@ class PseudoColorStudioApp:
                 return mapping.apply_histogram_equalized_lut(gray)
             if algo == "CNN: Best model":
                 from algorithms import cnn
-                return cnn.apply_trained_model(gray, output_size=(gray.shape[1], gray.shape[0]))
+                return cnn.apply_trained_model(
+                    gray, 
+                    output_size=(gray.shape[1], gray.shape[0]),
+                    color_boost=self.controls.saturation_var.get() / 10
+                )
         except Exception as exc:
             messagebox.showerror("Algorithm error", str(exc))
         return None
@@ -217,7 +221,8 @@ class PseudoColorStudioApp:
         self._cnn_request_id = request_id
         gray_copy = self.original_gray.copy()
         output_size = (gray_copy.shape[1], gray_copy.shape[0])
-        self._cnn_pending_request = (request_id, gray_copy, output_size)
+        color_boost = self.controls.saturation_var.get() / 10
+        self._cnn_pending_request = (request_id, gray_copy, output_size, color_boost)
 
         if self._cnn_busy:
             self.previews.info_var.set("CNN queued — previous run finishing…")
@@ -231,7 +236,7 @@ class PseudoColorStudioApp:
             self.controls.set_apply_btn_state(enabled=True)
             return
 
-        request_id, gray_copy, output_size = self._cnn_pending_request
+        request_id, gray_copy, output_size, color_boost = self._cnn_pending_request
         self._cnn_pending_request = None
         self._cnn_busy = True
 
@@ -241,15 +246,15 @@ class PseudoColorStudioApp:
         self.previews.info_var.set("Running CNN model…  please wait")
         self.controls.set_apply_btn_state(enabled=False)
 
-        future = self._cnn_executor.submit(self._run_cnn_model, gray_copy, output_size)
+        future = self._cnn_executor.submit(self._run_cnn_model, gray_copy, output_size, color_boost)
         future.add_done_callback(
             lambda f: self.root.after(0, lambda: self._on_cnn_finished(request_id, f))
         )
 
     @staticmethod
-    def _run_cnn_model(gray: np.ndarray, output_size: tuple[int, int]) -> np.ndarray:
+    def _run_cnn_model(gray: np.ndarray, output_size: tuple[int, int], color_boost: float) -> np.ndarray:
         from algorithms import cnn
-        return cnn.apply_trained_model(gray, output_size=output_size)
+        return cnn.apply_trained_model(gray, output_size=output_size, color_boost=color_boost)
 
     def _on_cnn_finished(self, request_id: int, future):
         self._cnn_busy = False
@@ -354,7 +359,9 @@ class PseudoColorStudioApp:
                 print(f"Compare CNN failed: {e}")
 
         # Start CNN asynchronously for compare
-        cnn_future = self._cnn_executor.submit(self._run_algorithm, "CNN: Best model", self.original_gray.copy())
+        color_boost = self.controls.saturation_var.get() / 10
+        out_size = (self.original_gray.shape[1], self.original_gray.shape[0])
+        cnn_future = self._cnn_executor.submit(self._run_cnn_model, self.original_gray.copy(), out_size, color_boost)
         cnn_future.add_done_callback(
             lambda f: self.root.after(0, lambda: _on_compare_cnn_done(f))
         )

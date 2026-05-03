@@ -99,7 +99,11 @@ def _get_model():
 # =========================
 # MAIN INFERENCE FUNCTION
 # =========================
-def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | None = None) -> np.ndarray:
+def apply_trained_model(
+    gray_img: np.ndarray,
+    output_size: tuple[int, int] | None = None,
+    color_boost: float = 1.2,
+) -> np.ndarray:
     gray = prepare_gray(gray_img, bgr_to_gray=True)
 
     if output_size is None:
@@ -143,7 +147,7 @@ def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | Non
     # =========================
     # COLOR BOOST (IMPROVES REDS)
     # =========================
-    pred_ab = pred_ab * 1.2
+    pred_ab = pred_ab * color_boost
     pred_ab = np.clip(pred_ab, -1, 1)
 
     # Convert back to LAB

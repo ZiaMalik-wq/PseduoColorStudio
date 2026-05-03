@@ -155,6 +155,21 @@ class ControlPanel:
             font=ctk.CTkFont(size=11),
         ).pack(anchor="w", padx=12, pady=(0, 6))
 
+        # Color Saturation (CNN)
+        self._saturation_frame = ctk.CTkFrame(self._params_container, fg_color="transparent")
+        self._saturation_display = self._make_slider_row(
+            self._saturation_frame, "Color Saturation", hint="CNN: Best model"
+        )
+        self.saturation_var = ctk.IntVar(value=12)
+        ctk.CTkSlider(
+            self._saturation_frame, variable=self.saturation_var, from_=5, to=20,
+            command=self._apply_slider,
+        ).pack(fill="x", padx=12, pady=(0, 6))
+        self.saturation_var.trace_add(
+            "write",
+            lambda *_: self._saturation_display.configure(text=f"{self.saturation_var.get() / 10:.1f}"),
+        )
+
         # No-params placeholder
         self._no_params_label = ctk.CTkLabel(
             self._params_container,
@@ -271,7 +286,7 @@ class ControlPanel:
     def _hide_all_param_children(self):
         for child in (
             self._freq_frame, self._gamma_frame, self._slices_frame,
-            self._thresholds_frame, self._no_params_label,
+            self._thresholds_frame, self._saturation_frame, self._no_params_label,
         ):
             child.place_forget()
 
@@ -287,6 +302,8 @@ class ControlPanel:
             self._slices_frame.place(relx=0, rely=0, relwidth=1)
         elif algo == "Slicing: Custom thresholds":
             self._thresholds_frame.place(relx=0, rely=0, relwidth=1)
+        elif algo == "CNN: Best model":
+            self._saturation_frame.place(relx=0, rely=0, relwidth=1)
         else:
             self._no_params_label.place(relx=0.5, rely=0.5, anchor="center")
 
