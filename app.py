@@ -60,6 +60,13 @@ class PseudoColorStudioApp:
         )
         self.previews = PreviewPanel(main)
 
+        # ── Keyboard shortcuts ───────────────────────────────────────────
+        self.root.bind("<Control-o>", lambda e: self._open_image())
+        self.root.bind("<Control-O>", lambda e: self._open_image())
+        self.root.bind("<Control-s>", lambda e: self._save_result())
+        self.root.bind("<Control-S>", lambda e: self._save_all())
+        self.root.bind("<Return>", lambda e: self._apply())
+
     # ------------------------------------------------------------------ #
     #  Image I/O                                                           #
     # ------------------------------------------------------------------ #
