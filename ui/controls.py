@@ -147,6 +147,7 @@ class ControlPanel:
         )
         self.thresholds_entry.insert(0, "64, 128, 192")
         self.thresholds_entry.pack(fill="x", padx=12, pady=(0, 4))
+        self.thresholds_entry.bind("<KeyRelease>", self._validate_thresholds)
         ctk.CTkLabel(
             self._thresholds_frame,
             text="Used by: Slicing: Custom thresholds",
@@ -200,6 +201,38 @@ class ControlPanel:
 
     def _apply_slider(self, _=None):
         self._on_apply()
+
+    def _validate_thresholds(self, event=None):
+        """Validates custom threshold entry on key release and updates border color."""
+        text = self.thresholds_entry.get()
+        valid = True
+        
+        try:
+            thresholds = []
+            for part in text.split(","):
+                value = part.strip()
+                if not value:
+                    continue
+                threshold = int(value)
+                if not 0 < threshold < 255:
+                    valid = False
+                    break
+                thresholds.append(threshold)
+            
+            # Check maximum 7 thresholds
+            if len(sorted(dict.fromkeys(thresholds))) > 7:
+                valid = False
+                
+        except ValueError:
+            valid = False
+            
+        if valid:
+            # Restore to default CTkEntry border color
+            self.thresholds_entry.configure(border_color=["#979DA2", "#565B5E"])
+        else:
+            self.thresholds_entry.configure(border_color="red")
+        
+        return valid
 
     # ------------------------------------------------------------------ #
     #  Category / algorithm selection                                      #
