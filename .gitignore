@@ -20,9 +20,5 @@ Thumbs.db
 # Editor
 .vscode/
 
-# PyTorch / model artifacts
-*.pt
-*.pth
-
 # Logs
 *.log
