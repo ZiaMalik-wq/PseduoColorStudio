@@ -1,7 +1,10 @@
+import logging
 import cv2
 import numpy as np
 
 from algorithms.utils import prepare_gray
+
+logger = logging.getLogger(__name__)
 
 
 def apply_sin_mapping(gray_img: np.ndarray, frequency: float = 1.0) -> np.ndarray:
@@ -13,6 +16,7 @@ def apply_sin_mapping(gray_img: np.ndarray, frequency: float = 1.0) -> np.ndarra
     G = sin(f * pi * I + 2pi/3)
     B = sin(f * pi * I + 4pi/3)
     """
+    logger.info(f"Applying sine mapping with frequency {frequency}")
     gray = prepare_gray(gray_img)
     f = frequency * np.pi
 

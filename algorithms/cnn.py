@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from pathlib import Path
 
@@ -16,6 +17,7 @@ MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "best_model_finetu
 MODEL_STRIDE = 8
 MAX_CNN_DIM = 1024
 
+logger = logging.getLogger(__name__)
 
 # =========================
 # MODEL
@@ -87,6 +89,7 @@ def _get_model():
         raise FileNotFoundError(f"Trained model not found: {MODEL_PATH}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Loading CNN model from {MODEL_PATH} onto {device}")
 
     model = UNet().to(device)
     state_dict = torch.load(MODEL_PATH, map_location=device, weights_only=True)
@@ -108,6 +111,8 @@ def apply_trained_model(
 
     if output_size is None:
         output_size = (gray.shape[1], gray.shape[0])
+        
+    logger.info(f"CNN inference started. Original shape: {gray.shape[:2]}, Target: {output_size}, Boost: {color_boost}")
 
     target_width, target_height = output_size
 

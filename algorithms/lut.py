@@ -1,3 +1,4 @@
+import logging
 import cv2
 import numpy as np
 
@@ -16,6 +17,8 @@ COLORMAPS = {
     "viridis":  cv2.COLORMAP_VIRIDIS,
     "turbo":    cv2.COLORMAP_TURBO,
 }
+
+logger = logging.getLogger(__name__)
 
 
 def apply_lut(gray_img: np.ndarray, colormap: str = "jet") -> np.ndarray:

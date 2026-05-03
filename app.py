@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import tkinter as tk
@@ -16,6 +17,8 @@ from algorithms import lut, mapping, slicing
 from ui.toolbar import ToolbarFrame
 from ui.controls import ControlPanel, ALGORITHM_CATEGORIES, ALGORITHMS
 from ui.previews import PreviewPanel
+
+logger = logging.getLogger(__name__)
 
 
 class PseudoColorStudioApp:
@@ -91,6 +94,7 @@ class PseudoColorStudioApp:
         self.original_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
 
         name = os.path.basename(path)
+        logger.info(f"Loaded image: {path} ({img_color.shape[1]}x{img_color.shape[0]} px)")
         self.toolbar.status_var.set(f"{name}  |  {img_color.shape[1]}×{img_color.shape[0]} px")
         self.previews.info_var.set(f"Loaded: {name}")
 
@@ -109,6 +113,7 @@ class PseudoColorStudioApp:
         )
         if path:
             cv2.imwrite(path, self.result_bgr)
+            logger.info(f"Saved result image to {path}")
             self.toolbar.status_var.set(f"Saved → {os.path.basename(path)}")
 
     def _save_all(self):
@@ -127,6 +132,7 @@ class PseudoColorStudioApp:
                 cv2.imwrite(os.path.join(folder, f"{safe}.png"), result)
                 saved += 1
 
+        logger.info(f"Batch saved {saved} images to {folder}")
         self.toolbar.status_var.set(f"All results saved → {folder}")
         messagebox.showinfo("Done", f"Saved {saved} images to:\n{folder}")
 
@@ -138,6 +144,7 @@ class PseudoColorStudioApp:
         if self.original_gray is None:
             return
         algo = self.controls.algo_var.get()
+        logger.info(f"Applying algorithm: {algo}")
 
         # Clear stale CNN request when switching away
         if algo != "CNN: Best model":
@@ -194,6 +201,7 @@ class PseudoColorStudioApp:
                     color_boost=self.controls.saturation_var.get() / 10
                 )
         except Exception as exc:
+            logger.exception(f"Algorithm error running {algo}:")
             messagebox.showerror("Algorithm error", str(exc))
         return None
 
@@ -229,6 +237,7 @@ class PseudoColorStudioApp:
         gray_copy = self.original_gray.copy()
         output_size = (gray_copy.shape[1], gray_copy.shape[0])
         color_boost = self.controls.saturation_var.get() / 10
+        logger.info(f"Queuing async CNN request {request_id} with boost {color_boost}")
         self._cnn_pending_request = (request_id, gray_copy, output_size, color_boost)
 
         if self._cnn_busy:
@@ -274,7 +283,9 @@ class PseudoColorStudioApp:
 
         try:
             result = future.result()
+            logger.info(f"CNN async request {request_id} completed successfully.")
         except Exception as exc:
+            logger.exception("CNN inference failed:")
             messagebox.showerror("CNN error", str(exc))
             self.previews.info_var.set("CNN failed")
             self.previews.draw_placeholder(self.previews.canvas_result, "CNN failed\nSee error dialog")
