@@ -5,6 +5,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 
 PREVIEW_SIZE = 320
+_RESIZE_DELAY_MS = 150  # debounce interval for window-resize redraws
 
 
 class PreviewPanel:
@@ -15,6 +16,12 @@ class PreviewPanel:
 
         # Keep strong references so PhotoImages aren't garbage-collected
         self._canvas_images: dict[tk.Canvas, ImageTk.PhotoImage] = {}
+
+        # Store raw image data per canvas so we can re-render on resize
+        self._canvas_data: dict[tk.Canvas, tuple] = {}  # canvas -> (img, is_gray)
+
+        # Debounce timer id per canvas
+        self._resize_after_ids: dict[tk.Canvas, str] = {}
 
         prev = ctk.CTkFrame(parent, fg_color="transparent")
         prev.pack(side="left", fill="both", expand=True)
@@ -58,14 +65,35 @@ class PreviewPanel:
     #  Canvas helpers                                                      #
     # ------------------------------------------------------------------ #
 
-    @staticmethod
-    def _make_canvas(parent) -> tk.Canvas:
+    def _make_canvas(self, parent) -> tk.Canvas:
         canvas = tk.Canvas(parent, bg="#1e1e1e", highlightthickness=0)
         canvas.pack(fill="both", expand=True, padx=2, pady=2)
+        canvas.bind("<Configure>", lambda e, c=canvas: self._on_canvas_resize(c))
         return canvas
+
+    def _on_canvas_resize(self, canvas: tk.Canvas):
+        """Debounced handler — re-renders the stored image after resizing stops."""
+        # Cancel any pending redraw for this canvas
+        if canvas in self._resize_after_ids:
+            canvas.after_cancel(self._resize_after_ids[canvas])
+
+        self._resize_after_ids[canvas] = canvas.after(
+            _RESIZE_DELAY_MS,
+            lambda: self._redraw(canvas),
+        )
+
+    def _redraw(self, canvas: tk.Canvas):
+        """Re-render the stored image data at the canvas's current size."""
+        self._resize_after_ids.pop(canvas, None)
+        if canvas in self._canvas_data:
+            img, is_gray = self._canvas_data[canvas]
+            self._render_image(canvas, img, is_gray=is_gray)
 
     def draw_placeholder(self, canvas: tk.Canvas, text: str):
         """Draw centred placeholder text on a canvas."""
+        # Clear stored image data so resize doesn't overwrite the placeholder
+        self._canvas_data.pop(canvas, None)
+
         canvas.update_idletasks()
         cw = max(canvas.winfo_width(), PREVIEW_SIZE)
         ch = max(canvas.winfo_height(), PREVIEW_SIZE)
@@ -77,6 +105,8 @@ class PreviewPanel:
 
     def draw_loading(self, canvas: tk.Canvas, text: str = "⏳  Running CNN…"):
         """Draw a loading indicator on a canvas."""
+        self._canvas_data.pop(canvas, None)
+
         canvas.update_idletasks()
         cw = max(canvas.winfo_width(), PREVIEW_SIZE)
         ch = max(canvas.winfo_height(), PREVIEW_SIZE)
@@ -91,7 +121,12 @@ class PreviewPanel:
         )
 
     def show_image(self, canvas: tk.Canvas, img, *, is_gray: bool):
-        """Render a NumPy image (BGR or grayscale) onto a canvas, scaled to fit."""
+        """Store the image data and render it onto the canvas, scaled to fit."""
+        self._canvas_data[canvas] = (img, is_gray)
+        self._render_image(canvas, img, is_gray=is_gray)
+
+    def _render_image(self, canvas: tk.Canvas, img, *, is_gray: bool):
+        """Internal: scale and draw a NumPy image onto a canvas at its current size."""
         canvas.update_idletasks()
         cw = max(canvas.winfo_width(), PREVIEW_SIZE)
         ch = max(canvas.winfo_height(), PREVIEW_SIZE)
