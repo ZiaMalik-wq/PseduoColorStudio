@@ -1,0 +1,8 @@
+customtkinter
+darkdetect
+numpy
+opencv-python
+Pillow
+packaging
+torch
+torchvision
