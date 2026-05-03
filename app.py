@@ -10,8 +10,6 @@ import customtkinter as ctk
 import numpy as np
 from PIL import Image, ImageTk
 
-app_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(app_dir))
 
 from algorithms import lut, mapping, slicing
 from ui.toolbar import ToolbarFrame

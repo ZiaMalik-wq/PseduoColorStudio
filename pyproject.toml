@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "color_studio"
+version = "0.1.0"
+description = "Pseudo-Color Studio - Algorithms + CNN"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "customtkinter>=5.2,<6",
+    "darkdetect",
+    "numpy>=1.24,<2",
+    "opencv-python>=4.8,<5",
+    "Pillow>=10.0,<11",
+    "packaging",
+    "torch>=2.0,<3",
+    "torchvision>=0.15,<1"
+]
+
+[project.scripts]
+color-studio = "app:launch"
