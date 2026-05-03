@@ -14,6 +14,7 @@ from algorithms.utils import prepare_gray
 # =========================
 MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "best_model_finetuned.pth"
 MODEL_STRIDE = 8
+MAX_CNN_DIM = 1024
 
 
 # =========================
@@ -115,6 +116,13 @@ def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | Non
         )
         gray = cv2.resize(gray, (target_width, target_height), interpolation=interpolation)
 
+    # Cap resolution to prevent OOM on large images
+    final_size = (gray.shape[1], gray.shape[0])  # (w, h) to restore later
+    h, w = gray.shape[:2]
+    if max(h, w) > MAX_CNN_DIM:
+        scale = MAX_CNN_DIM / max(h, w)
+        gray = cv2.resize(gray, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
     # Pad for UNet compatibility
     padded_gray, pad_right, pad_bottom = _pad_to_multiple(gray, MODEL_STRIDE)
 
@@ -153,6 +161,10 @@ def apply_trained_model(gray_img: np.ndarray, output_size: tuple[int, int] | Non
     # Remove padding
     if pad_bottom or pad_right:
         bgr = bgr[: gray.shape[0], : gray.shape[1]]
+
+    # Upscale back to original requested size if we capped resolution
+    if (bgr.shape[1], bgr.shape[0]) != final_size:
+        bgr = cv2.resize(bgr, final_size, interpolation=cv2.INTER_CUBIC)
 
     return bgr
 
